@@ -61,53 +61,50 @@ void loop() {
   distanceRight = lookRight();
   distanceLeft = lookLeft();
 
-  if (wait) {
-    detectObject();
-  }
+  // Check for object detection continuously
+  detectObject();
 
   if (detectBlackLine()) {
     handleBlackLineDetection();
   }
 
-  // Add logic to navigate based on Ultrasonic Sensor readings
-  navigate();
-}
-
-void navigate() {
-  // Define thresholds for wall detection
-  int frontThreshold = 20; // Distance threshold for front
-  int sideThreshold = 15;  // Distance threshold for sides
-
-  // Read distance from sensors
-  distanceFront = getDistance();
-  distanceRight = lookRight();
-  distanceLeft = lookLeft();
-
-  if (distanceFront > frontThreshold) {
+  if (distanceFront > 20) {
     moveForward();
-    sensorServo.write(90); // Keep the sensor facing forward
+    
+    if (distanceLeft > 10 && distanceLeft < 20) {
+      moveForward();
+    } else if (distanceLeft >= 20) {
+      turnLeft();
+      delay(200); 
+    } else if (distanceLeft < 10 && distanceLeft > 0) {
+      turnRight();
+      delay(200); 
+    }
   } else {
-    makeDecisionBasedOnSideSensors(sideThreshold);
+    moveStop();
+    delay(500); 
+    
+    if (distanceRight > 20) {
+      turnRight();
+      delay(200); 
+    } else {
+      turnRight();
+      delay(400); 
+    }
   }
 }
 
-void makeDecisionBasedOnSideSensors(int sideThreshold) {
-  if (distanceLeft > sideThreshold && distanceRight > sideThreshold) {
-    turnLeft();
-    delay(200);
-    sensorServo.write(0); // Turn the sensor to the left
-  } else if (distanceLeft > sideThreshold) {
-    turnLeft();
-    delay(200);
-    sensorServo.write(180); // Keep the sensor facing left
-  } else if (distanceRight > sideThreshold) {
-    turnRight();
-    delay(200);
-    sensorServo.write(0); // Turn the sensor to the right
+void detectObject() {
+  int distance = getDistance();
+
+  if (distance < 25) {
+    // Check if the gripper is not currently gripping an object
+    if (!isGripping) {
+      gripServo.write(90); // Close the gripper to pick up the object
+      isGripping = true;
+    }
   } else {
-    turnLeft();
-    delay(200);
-    sensorServo.write(0); // Turn the sensor to the left
+    isGripping = false; // Reset the gripping status
   }
 }
 
@@ -133,47 +130,43 @@ void moveForward()
 
 void turnLeft()
 {
-  analogWrite(LFM, 130);
+  analogWrite(LBM, 130);
   analogWrite(RFM, 250);
-  analogWrite(LBM, 0);
+  analogWrite(LFM, 0);
   analogWrite(RBM, 0);
+
+  delay(500);
+
+  moveForward();
 }
 
 void turnRight()
 {
   analogWrite(LFM, 250);
-  analogWrite(RFM, 130);
+  analogWrite(RBM, 130);
   analogWrite(LBM, 0);
-  analogWrite(RBM, 0);
+  analogWrite(RFM, 0);
+  
+  delay(500);
+
+  moveForward();
 }
 
 int lookRight(){
-  int distance = 0; // Initialize distance variable
-
   setServoAngle(0, servoSensor);
   delay(500);
-
-  // Read distance after servo movement
-  distance = getDistance();
-  
+  int distance = getDistance();
   delay(100);
   setServoAngle(90, servoSensor);
-  
   return distance;
 }
 
 int lookLeft(){
-  int distance = 0; // Initialize distance variable
-
   setServoAngle(180, servoSensor);
   delay(500);
-
-  // Read distance after servo movement
-  distance = getDistance();
-
+  int distance = getDistance();
   delay(100);
   setServoAngle(90, servoSensor);
-  
   return distance;
 }
 
@@ -201,15 +194,6 @@ int getDistance()
   distance = duration * 0.034 / 2;
 
   return distance;
-}
-
-void detectObject() {
-  int distance = getDistance();
-
-  if (distance < 25) {
-    wait = false;
-    gripServo.write(90); // Close the gripper to pick up the object
-  }
 }
 
 bool detectBlackLine() {
