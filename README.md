@@ -24,4 +24,4 @@ To replicate or contribute to the project, follow these steps:
 1. *Clone the Repository:*
    ```bash
    git clone https://github.com/ofeliahantoiu/BattleBot.git
-   
+   ```
