@@ -1,21 +1,21 @@
-// LFM = Left Forward Motor 
-// LBM = Left Backward Motor
-// RFM = Right Forward Motor
-// RBM = Right Backward Motor
+// LFM = Left Forward Motor A2
+// LBM = Left Backward Motor A1
+// RFM = Right Forward Motor B1
+// RBM = Right Backward Motor B2
 
-#define LFM 6
-#define LBM 9
-#define RFM 5
-#define RBM 3
+#define LFM 5
+#define LBM 6
+#define RFM 10
+#define RBM 11
 
-#define encoderRM 4 //encoder Right Wheel
-#define encoderLM 7 //encoder Left Wheel
+#define encoderRM 2 //encoder Right Motor
+#define encoderLM 3 //encoder Left Motor
  
-#define trig 12 // Ultrasonic sensor trigger 
-#define echo 13 // Ultrasonic sensor echo
+#define trig 13 // Ultrasonic sensor trigger 
+#define echo 12 // Ultrasonic sensor echo
 
-#define servoSensor 10 //servo used for the ultrasonic sensor 
-#define servoGrip 2 //servo used for the gripper
+#define servoSensor 9 //servo used for the ultrasonic sensor 
+#define servoGrip 7 //servo used for the gripper
 
 //ir1-ir6 - IR sensors starting from the left side
 #define ir1 A5
@@ -40,8 +40,8 @@ bool endDetected = false;
 
 bool turnedRight = false;
 
-int countRM = 0;
-int countLM = 0;
+volatile int countRM = 0;
+volatile int countLM = 0;
 
 void setup() 
 {
@@ -54,8 +54,8 @@ void setup()
 
   pinMode(servoSensor, OUTPUT);
   pinMode(servoGrip, OUTPUT);
-  setServoAngle(90, servoGrip);
-
+  setServoAngle(95, servoGrip);
+  
   pinMode(trig, OUTPUT);
   pinMode(echo, INPUT);
 
@@ -68,7 +68,65 @@ void setup()
 
 void loop() 
 {
-  
+  /*if (waitingStart)
+  {
+    querySensors();
+
+    if (distanceFront < 25)
+    {
+      waitingStart = false;
+      startSequence = true;
+    }
+
+    return wait(100);
+  }
+
+  if (startSequence)
+  {
+    wait(2000);
+
+    moveForwardInTicks(60);
+    wait(250);
+
+    basicTurnLeft();
+    wait(250);
+
+    moveForwardInTicks(40);
+
+    startSequence = false;
+
+    return wait(250);
+  }
+
+  endDetected = allBlack();
+
+  // end sequence
+  if (endDetected)
+  {
+    moveStop();
+    wait(150);
+    moveBackwardInTicks(20);
+    wait(150);
+    while (true)
+        ;
+  }
+
+  querySensors();
+  Serial.println(distanceLeft);
+
+  if (distanceLeft > 30)
+  {
+    return turnLeft();
+  }
+
+  if (distanceLeft < 25 && distanceFront < 12)
+  {
+    return turnRight();
+  }
+
+  return moveForward();*/
+  querySensors();
+  moveForward();
 }
 
 // while performing a right turn, the car might need
@@ -88,30 +146,30 @@ void adjustToWall()
   resetCounters();
   while (countRM < 12)
   {
-    analogWrite(RBM, 235);
+    analogWrite(RBM, 255);
     analogWrite(LBM, 255);
   }
 
-    moveStop();
+  moveStop();
 
-    resetCounters();
-    while (countRM < 12)
-    {
-        analogWrite(RFM, 255);
-    }
+  resetCounters();
+  while (countRM < 12)
+  {
+      analogWrite(RFM, 255);
+  }
 
-    moveStop();
+  moveStop();
 
-    resetCounters();
-    while (countRM < 8)
-    {
-        analogWrite(RFM, 255);
-        analogWrite(LFM, 255);
-    }
+  resetCounters();
+  while (countRM < 8)
+  {
+      analogWrite(RFM, 255);
+      analogWrite(LFM, 255);
+  }
 
-    moveStop();
+  moveStop();
 
-    resetCounters();
+  resetCounters();
 }
 
 void moveStop()
@@ -128,18 +186,18 @@ void moveForward()
 {
   if (distanceLeft > 9.2)
   {
-    analogWrite(RFM, 255);
-    analogWrite(LFM, 230);
+    analogWrite(RFM, 240);
+    analogWrite(LFM, 200);
   }
   else if (distanceLeft < 7.2)
   {
-    analogWrite(RFM, 225);
+    analogWrite(RFM, 240);
     analogWrite(LFM, 255);
   }
   else
   {
-    analogWrite(RFM, 255);
-    analogWrite(LFM, 232);
+    analogWrite(RFM, 240);
+    analogWrite(LFM, 255);
   }
 
   turnedRight = false;
@@ -154,7 +212,7 @@ void moveForwardInTicks(int ticks)
   while (countRM < ticks)
   {
     analogWrite(LFM, 255);
-    analogWrite(RFM, 245);
+    analogWrite(RFM, 255);
     digitalWrite(LBM, LOW);
     digitalWrite(RBM, LOW);
   }
@@ -164,7 +222,7 @@ void moveForwardInTicks(int ticks)
 
   moveStop();
   
-  setServoAngle(0, servoGrip);
+  setServoAngle(2, servoGrip);
 }
 
 void moveBackwardInTicks(int ticks)
@@ -308,7 +366,7 @@ float pulse(int proxTrig, int proxEcho)
 
 float lookFront()
 {
-  setServoAngle(90, servoSensor);
+  setServoAngle(84, servoSensor);
   wait(500);
   return round(pulse(trig, echo) * 100.0) / 100.0;
 }
@@ -332,8 +390,8 @@ void setServoAngle(int angle, int servoPin)
 
 float querySensors()
 {
-  distanceFront = lookFront();
   distanceLeft = lookLeft();
+  distanceFront = lookFront();
 }
 
 void queryIRSensors()
