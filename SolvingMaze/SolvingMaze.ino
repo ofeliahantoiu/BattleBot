@@ -68,11 +68,15 @@ void setup()
 
 void loop() 
 {
+  querySensors();
+  basicTurnRight();
+  wait(3000);
   /*if (waitingStart)
   {
     querySensors();
+    Serial.println(distanceLeft);
 
-    if (distanceFront < 25)
+    /*if (distanceFront < 25)
     {
       waitingStart = false;
       startSequence = true;
@@ -125,8 +129,6 @@ void loop()
   }
 
   return moveForward();*/
-  querySensors();
-  moveForward();
 }
 
 // while performing a right turn, the car might need
@@ -184,21 +186,10 @@ void moveStop()
 // it adjusts the car so that it is constantly around 8.2 cm away from the wall
 void moveForward()
 {
-  if (distanceLeft > 9.2)
-  {
-    analogWrite(RFM, 240);
-    analogWrite(LFM, 200);
-  }
-  else if (distanceLeft < 7.2)
-  {
-    analogWrite(RFM, 240);
-    analogWrite(LFM, 255);
-  }
-  else
-  {
-    analogWrite(RFM, 240);
-    analogWrite(LFM, 255);
-  }
+  analogWrite(RFM, 240);
+  analogWrite(LFM, 255);
+  digitalWrite(LBM, LOW);
+  digitalWrite(RBM, LOW);
 
   turnedRight = false;
 
@@ -212,7 +203,7 @@ void moveForwardInTicks(int ticks)
   while (countRM < ticks)
   {
     analogWrite(LFM, 255);
-    analogWrite(RFM, 255);
+    analogWrite(RFM, 230);
     digitalWrite(LBM, LOW);
     digitalWrite(RBM, LOW);
   }
@@ -231,8 +222,8 @@ void moveBackwardInTicks(int ticks)
 
   while (countRM < ticks)
   {
-    digitalWrite(LBM, HIGH);
-    digitalWrite(RBM, HIGH);
+    analogWrite(LBM, 255);
+    analogWrite(RBM, 225);
     digitalWrite(LFM, LOW);
     digitalWrite(RFM, LOW);
   }
@@ -300,10 +291,12 @@ void basicTurnLeft()
   moveStop();
   resetCounters();
 
-  while (countRM < 17)
+  while (countRM < 63)
   {
-    analogWrite(RFM, 255);
-    analogWrite(LBM, 255);
+    analogWrite(RFM, 250);
+    analogWrite(LBM, 250);
+    digitalWrite(RBM, LOW);
+    digitalWrite(LFM, LOW);
   }
 
   moveStop();
@@ -314,42 +307,16 @@ void basicTurnRight()
   moveStop();
   resetCounters();
 
-  while (countLM < 17)
+  while (countLM < 63)
   {
     analogWrite(LFM, 255);
-    analogWrite(RBM, 255);
+    analogWrite(RBM, 240);
+    digitalWrite(RFM, LOW);
+    digitalWrite(LBM, LOW);
   }
 
   moveStop();
 }
-
-//Function to calculate distance in cm
-float getDistance()
-{
-  int distance, duration;
-
-  digitalWrite(trig, LOW);
-  delayMicroseconds(2);
-
-  digitalWrite(trig, HIGH);
-  delayMicroseconds(10);
-
-  digitalWrite(trig, LOW);
-
-  duration = pulseIn(echo, HIGH);
-  distance= duration*0.034/2;
-  return distance;
-}
-
-/*int lookRight()
-{
-  setServoAngle(0, servoSensor);
-  wait(500);
-  int distance = getDistance();
-  wait(100);
-  setServoAngle(90, servoSensor);
-  return distance;
-}*/
 
 float pulse(int proxTrig, int proxEcho)
 // sends the pulse;
