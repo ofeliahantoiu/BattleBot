@@ -2,6 +2,12 @@
 // LBM = Left Backward Motor A1
 // RFM = Right Forward Motor B1
 // RBM = Right Backward Motor B2
+#include <Servo.h>
+
+Servo sensorServo;
+Servo gripServo;
+
+bool isGripping = false;
 
 #define LFM 5
 #define LBM 6
@@ -70,6 +76,7 @@ enum CarState {
   STATE_FORWARD,
   STATE_OBSTACLE_DETECTED,
   STATE_TURN_RIGHT,
+  STATE_TURN_LEFT,
   STATE_STOP,
   STATE_WAIT
 };
@@ -79,15 +86,19 @@ CarState carState = STATE_FORWARD;
 void loop() 
 {
   querySensors();
+
+  //Debug for ultrasonic sensor
   Serial.print("Front: ");
   Serial.print(distanceFront);
   Serial.print(" | Left: ");
   Serial.println(distanceLeft);
 
+  //Control the performance of the car
   switch (carState) {
+   
     case STATE_FORWARD:
-      if (distanceFront > 15) {
-        moveForwardInTicks(25);
+      if (distanceFront > 11) {
+        moveForwardInTicks(70);
       } else {
         carState = STATE_OBSTACLE_DETECTED;
       }
@@ -95,10 +106,23 @@ void loop()
 
     case STATE_OBSTACLE_DETECTED:
       moveBackwardInTicks(20); // Move backward for a short distance
-      carState = STATE_TURN_RIGHT; // Move to the turn right state
+      if (distanceLeft > 10) {
+        carState = STATE_TURN_LEFT;
+      } else {
+        carState = STATE_TURN_RIGHT; // Move to the turn right state
+      }
+      break;
+
+    case STATE_TURN_LEFT:
+      wait(350);
+//      moveForwardInTicks(20);
+      basicTurnLeft(); // Turn left
+      carState = STATE_STOP; 
       break;
 
     case STATE_TURN_RIGHT:
+      wait(350);
+//      moveForwardInTicks(20);
       basicTurnRight(); // Turn right
       carState = STATE_STOP; // Move to the stop state after turning
       break;
@@ -243,6 +267,42 @@ void adjustToWall()
   resetCounters();
 }
 
+void handleBlackLineDetection() { 
+  if (isGripping) {
+    gripServo.write(0); // Drop the object
+    wait(800); // Delay to ensure the object is dropped
+    isGripping = false;
+  } else {
+    gripServo.write(90); // Close the gripper to pick up the object
+    isGripping = true;
+  }
+//  wait = true; // Set wait to true to detect the next object
+}
+
+bool detectBlackLine() {
+  // Read analog values from all 8 sensors
+  int sensorValues[8] = {
+    analogRead(ir1),
+    analogRead(ir2),
+    analogRead(ir3),
+    analogRead(ir4),
+    analogRead(ir5),
+    analogRead(ir6)
+  };
+
+  // Set a threshold for black line detection (adjust as needed)
+  int threshold = 800;
+
+  // Check if any sensor reads a value below the threshold
+  for (int i = 0; i < 8; i++) {
+    if (sensorValues[i] < threshold) {
+      return true; // Black line detected
+    }
+  }
+
+  return false; // No black line detected
+}
+
 void moveStop()
 {
   digitalWrite(RFM, LOW);
@@ -272,7 +332,7 @@ void moveForwardInTicks(int ticks)
   while (countRM < ticks)
   {
     analogWrite(LFM, 255);
-    analogWrite(RFM, 230);
+    analogWrite(RFM, 228);
     digitalWrite(LBM, LOW);
     digitalWrite(RBM, LOW);
   }
@@ -357,34 +417,34 @@ void turnLeft()
 
 void basicTurnLeft()
 {
-  moveStop();
-  resetCounters();
-
-  while (countRM < 63)
-  {
+//  moveStop();
+//  resetCounters();
+//
+//  while (countRM < 75)
+//  {
+    analogWrite(LBM, 130);
     analogWrite(RFM, 250);
-    analogWrite(LBM, 250);
-    digitalWrite(RBM, LOW);
-    digitalWrite(LFM, LOW);
-  }
-
-  moveStop();
+    analogWrite(LFM, 0);
+    analogWrite(RBM, 0);
+//  }
+//
+//  moveStop();
 }
 
 void basicTurnRight()
 {
-  moveStop();
-  resetCounters();
-
-  while (countLM < 63)
-  {
-    analogWrite(LFM, 255);
-    analogWrite(RBM, 240);
-    digitalWrite(RFM, LOW);
-    digitalWrite(LBM, LOW);
-  }
-
-  moveStop();
+//  moveStop();
+//  resetCounters();
+//
+//  while (countLM < 80)
+//  {
+    analogWrite(LFM, 250);
+    analogWrite(RBM, 130);
+    analogWrite(LBM, 0);
+    analogWrite(RFM, 0);
+//  }
+//
+//  moveStop();
 }
 
 float pulse(int proxTrig, int proxEcho)
