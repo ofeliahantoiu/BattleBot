@@ -24,15 +24,17 @@ bool isGripping = false;
 #define servoGrip 7 //servo used for the gripper
 
 //ir1-ir6 - IR sensors starting from the left side
-#define ir1 A5
-#define ir2 A4
-#define ir3 A3
-#define ir4 A2
-#define ir5 A1
-#define ir6 A0
+#define ir1 A0
+#define ir2 A1
+#define ir3 A2
+#define ir4 A3
+#define ir5 A4
+#define ir6 A5
+#define ir7 A6
+#define ir8 A7
 
-int irSensors[6] = {ir1, ir2, ir3, ir4, ir5, ir6};
-boolean irValues[6];
+int irSensors[8] = {ir1, ir2, ir3, ir4, ir5, ir6, ir7, ir8};
+boolean irValues[8];
 
 const int minPulseWidth = 500; // Minimum pulse width for servo
 const int maxPulseWidth = 2500; // Maximum pulse width for servo
@@ -61,6 +63,7 @@ void setup()
   pinMode(servoSensor, OUTPUT);
   pinMode(servoGrip, OUTPUT);
   setServoAngle(95, servoGrip);
+  setServoAngle(84, servoSensor);
   
   pinMode(trig, OUTPUT);
   pinMode(echo, INPUT);
@@ -72,7 +75,8 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(encoderLM), updateLM, CHANGE);
 }
 
-enum CarState {
+enum CarState 
+{
   STATE_FORWARD,
   STATE_OBSTACLE_DETECTED,
   STATE_TURN_RIGHT,
@@ -85,44 +89,76 @@ CarState carState = STATE_FORWARD;
 
 void loop() 
 {
-  querySensors();
+  if (waitingStart)
+  {
+    querySensors();
+    if (distanceFront < 25)
+    {
+        waitingStart = false;
+        startSequence = true;
+    }
 
+    return wait(100);
+  }
+
+  querySensors();
   //Debug for ultrasonic sensor
   Serial.print("Front: ");
   Serial.print(distanceFront);
   Serial.print(" | Left: ");
   Serial.println(distanceLeft);
 
-  //Control the performance of the car
-  switch (carState) {
-   
+  if(distanceLeft > 30)
+  {
+    wait(350);
+    basicTurnLeft();
+    wait(350);
+  }
+
+  if(distanceLeft < 25 && distanceFront < 12)
+  {
+    wait(350);
+    basicTurnRight();
+    wait(350);
+  }
+
+  return moveForward();
+
+/*  //Control the performance of the car
+  switch (carState) 
+  { 
     case STATE_FORWARD:
-      if (distanceFront > 11) {
-        moveForwardInTicks(70);
-      } else {
+      if (distanceFront > 12) 
+      {
+        moveForwardInTicks(60);
+      } 
+      else 
+      {
         carState = STATE_OBSTACLE_DETECTED;
       }
       break;
 
     case STATE_OBSTACLE_DETECTED:
       moveBackwardInTicks(20); // Move backward for a short distance
-      if (distanceLeft > 10) {
+      if (distanceLeft > 15) 
+      {
         carState = STATE_TURN_LEFT;
-      } else {
+      } 
+      else
+      {
         carState = STATE_TURN_RIGHT; // Move to the turn right state
       }
       break;
 
     case STATE_TURN_LEFT:
       wait(350);
-//      moveForwardInTicks(20);
-      basicTurnLeft(); // Turn left
+      basicTurnLeft();
       carState = STATE_STOP; 
       break;
 
     case STATE_TURN_RIGHT:
       wait(350);
-//      moveForwardInTicks(20);
+      moveForwardInTicks(20);
       basicTurnRight(); // Turn right
       carState = STATE_STOP; // Move to the stop state after turning
       break;
@@ -138,91 +174,9 @@ void loop()
       break;
 
     default:
-      break;
-  }
+      moveForward();
+  }*/
 }
-
-
-//void loop() 
-//{
-//  querySensors();
-//  basicTurnRight();
-//  wait(3000);
-//
-//  Serial.print("Front: ");
-//  Serial.print(distanceFront);
-//  Serial.print(" | Left: ");
-//  Serial.println(distanceLeft);
-//
-//  // Check if there is enough space in front to move forward
-//  if (distanceFront > 15) {
-//    // Move forward for a certain number of ticks
-//    moveForwardInTicks(25);
-//  } else {
-//    // If not enough space, turn right
-//    turnRight();
-//  }
-//
-//  wait(150);
-//  /*if (waitingStart)
-//  {
-//    querySensors();
-//    Serial.println(distanceLeft);
-//
-//    /*if (distanceFront < 25)
-//    {
-//      waitingStart = false;
-//      startSequence = true;
-//    }
-//
-//    return wait(100);
-//  }
-//
-//  if (startSequence)
-//  {
-//    wait(2000);
-//
-//    moveForwardInTicks(60);
-//    wait(250);
-//
-//    basicTurnLeft();
-//    wait(250);
-//
-//    moveForwardInTicks(40);
-//
-//    startSequence = false;
-//
-//    return wait(250);
-//  }
-//
-//  endDetected = allBlack();
-//
-//  // end sequence
-//  if (endDetected)
-//  {
-//    moveStop();
-//    wait(150);
-//    moveBackwardInTicks(20);
-//    wait(150);
-//    while (true)
-//        ;
-//  }
-//
-//  querySensors();
-//  Serial.println(distanceLeft);
-//
-//  if (distanceLeft > 30)
-//  {
-//    return turnLeft();
-//  }
-//
-//  if (distanceLeft < 25 && distanceFront < 12)
-//  {
-//    return turnRight();
-//  }
-//
-//  return moveForward();*/
-//}
 
 // while performing a right turn, the car might need
 // to be adjusted to the wall
@@ -233,55 +187,44 @@ void adjustToWall()
 
   while (countRM < 10)
   {
-    analogWrite(RBM, 255);
+    analogWrite(RBM, 250);
   }
 
   moveStop();
-
   resetCounters();
+
   while (countRM < 12)
   {
-    analogWrite(RBM, 255);
+    analogWrite(RBM, 250);
     analogWrite(LBM, 255);
   }
 
   moveStop();
-
   resetCounters();
+
   while (countRM < 12)
   {
-      analogWrite(RFM, 255);
+      analogWrite(RFM, 230);
   }
 
   moveStop();
-
   resetCounters();
+
   while (countRM < 8)
   {
-      analogWrite(RFM, 255);
+      analogWrite(RFM, 228);
       analogWrite(LFM, 255);
   }
 
   moveStop();
-
   resetCounters();
 }
 
-void handleBlackLineDetection() { 
-  if (isGripping) {
-    gripServo.write(0); // Drop the object
-    wait(800); // Delay to ensure the object is dropped
-    isGripping = false;
-  } else {
-    gripServo.write(90); // Close the gripper to pick up the object
-    isGripping = true;
-  }
-//  wait = true; // Set wait to true to detect the next object
-}
-
-bool detectBlackLine() {
+bool detectBlackLine() 
+{
   // Read analog values from all 8 sensors
-  int sensorValues[8] = {
+  int sensorValues[8] = 
+  {
     analogRead(ir1),
     analogRead(ir2),
     analogRead(ir3),
@@ -290,12 +233,14 @@ bool detectBlackLine() {
     analogRead(ir6)
   };
 
-  // Set a threshold for black line detection (adjust as needed)
+  // Set a threshold for black line detection
   int threshold = 800;
 
   // Check if any sensor reads a value below the threshold
-  for (int i = 0; i < 8; i++) {
-    if (sensorValues[i] < threshold) {
+  for (int i = 0; i < 8; i++) 
+  {
+    if (sensorValues[i] < threshold) 
+    {
       return true; // Black line detected
     }
   }
@@ -315,11 +260,21 @@ void moveStop()
 // it adjusts the car so that it is constantly around 8.2 cm away from the wall
 void moveForward()
 {
-  analogWrite(RFM, 240);
-  analogWrite(LFM, 255);
-  digitalWrite(LBM, LOW);
-  digitalWrite(RBM, LOW);
-
+  if (distanceLeft > 9.2)
+  {
+    analogWrite(RFM, 232);
+    analogWrite(LFM, 255);
+  }
+  else if (distanceLeft < 7.2)
+  {
+    analogWrite(RFM, 228);
+    analogWrite(LFM, 255);
+  }
+  else
+  {
+    analogWrite(RFM, 229);
+    analogWrite(LFM, 255);
+  }
   turnedRight = false;
 
   endDetected = allBlack();
@@ -332,7 +287,7 @@ void moveForwardInTicks(int ticks)
   while (countRM < ticks)
   {
     analogWrite(LFM, 255);
-    analogWrite(RFM, 228);
+    analogWrite(RFM, 230);
     digitalWrite(LBM, LOW);
     digitalWrite(RBM, LOW);
   }
@@ -341,8 +296,6 @@ void moveForwardInTicks(int ticks)
   endDetected = allBlack();
 
   moveStop();
-  
-  setServoAngle(2, servoGrip);
 }
 
 void moveBackwardInTicks(int ticks)
@@ -362,7 +315,7 @@ void moveBackwardInTicks(int ticks)
 
   moveStop();
   
-  setServoAngle(0, servoGrip);
+  setServoAngle(3, servoGrip);
   
 }
 
@@ -394,7 +347,6 @@ void turnRight()
   return wait(150);
 }
 
-
 void turnLeft()
 {
   moveForwardInTicks(20);
@@ -417,34 +369,32 @@ void turnLeft()
 
 void basicTurnLeft()
 {
-//  moveStop();
-//  resetCounters();
-//
-//  while (countRM < 75)
-//  {
-    analogWrite(LBM, 130);
-    analogWrite(RFM, 250);
+  moveStop();
+  resetCounters();
+
+  while (countRM < 60)
+  {
+    analogWrite(LBM, 250);
+    analogWrite(RFM, 230);
     analogWrite(LFM, 0);
     analogWrite(RBM, 0);
-//  }
-//
-//  moveStop();
+  }
+  moveStop();
 }
 
 void basicTurnRight()
 {
-//  moveStop();
-//  resetCounters();
-//
-//  while (countLM < 80)
-//  {
-    analogWrite(LFM, 250);
-    analogWrite(RBM, 130);
+  moveStop();
+  resetCounters();
+
+  while (countLM < 85)
+  {
+    analogWrite(LFM, 255);
+    analogWrite(RBM, 255);
     analogWrite(LBM, 0);
     analogWrite(RFM, 0);
-//  }
-//
-//  moveStop();
+  }
+  moveStop();
 }
 
 float pulse(int proxTrig, int proxEcho)
@@ -493,7 +443,7 @@ float querySensors()
 void queryIRSensors()
 {
   //The function sets irValues[] to the actual values
-  for (int i = 0; i < 6; i++)
+  for (int i = 0; i < 8; i++)
   {
     irValues[i] = analogRead(irSensors[i]) > 800;
   }
@@ -503,14 +453,14 @@ boolean allBlack()
 {
   short sum = 0;
   queryIRSensors();
-  for (int i = 0; i < 6; i++)
+  for (int i = 0; i < 8; i++)
   {
     if (irValues[i])
     {
       sum++;
-    };
+    }
   }
-  return sum == 6;
+  return sum == 8;
 }
 
 void resetCounters()
