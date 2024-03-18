@@ -11,10 +11,12 @@
 #define encoderRM 2 //encoder Right Motor
 #define encoderLM 3 //encoder Left Motor
  
-#define trig 13 // Ultrasonic sensor trigger 
-#define echo 12 // Ultrasonic sensor echo
+#define frontTrig 13 // Ultrasonic sensor trigger front
+#define frontEcho 12 // Ultrasonic sensor echo front
 
-#define servoSensor 9 //servo used for the ultrasonic sensor 
+#define leftTrig 8 // Ultrasonic sensor trigger front
+#define leftEcho 9 // Ultrasonic sensor echo front
+ 
 #define servoGrip 7 //servo used for the gripper
 
 //ir1-ir6 - IR sensors starting from the left side
@@ -52,12 +54,14 @@ void setup()
   pinMode(RFM, OUTPUT);
   pinMode(RBM, OUTPUT);
 
-  pinMode(servoSensor, OUTPUT);
   pinMode(servoGrip, OUTPUT);
   setServoAngle(95, servoGrip);
   
-  pinMode(trig, OUTPUT);
-  pinMode(echo, INPUT);
+  pinMode(frontTrig, OUTPUT);
+  pinMode(frontEcho, INPUT);
+
+  pinMode(leftTrig, OUTPUT);
+  pinMode(leftEcho, INPUT);
 
   pinMode(encoderRM, INPUT);
   pinMode(encoderLM, INPUT);
@@ -69,109 +73,22 @@ void setup()
 void loop() 
 {
   querySensors();
-  basicTurnRight();
-  wait(3000);
-  /*if (waitingStart)
-  {
-    querySensors();
-    Serial.println(distanceLeft);
-
-    /*if (distanceFront < 25)
-    {
-      waitingStart = false;
-      startSequence = true;
-    }
-
-    return wait(100);
-  }
-
-  if (startSequence)
-  {
-    wait(2000);
-
-    moveForwardInTicks(60);
-    wait(250);
-
-    basicTurnLeft();
-    wait(250);
-
-    moveForwardInTicks(40);
-
-    startSequence = false;
-
-    return wait(250);
-  }
-
-  endDetected = allBlack();
-
-  // end sequence
-  if (endDetected)
-  {
-    moveStop();
-    wait(150);
-    moveBackwardInTicks(20);
-    wait(150);
-    while (true)
-        ;
-  }
-
-  querySensors();
-  Serial.println(distanceLeft);
 
   if (distanceLeft > 30)
   {
-    return turnLeft();
+    wait(350);
+    moveForwardInTicks(20);
+    basicTurnLeft();
   }
 
   if (distanceLeft < 25 && distanceFront < 12)
   {
-    return turnRight();
+    wait(350);
+    moveForwardInTicks(20);
+    basicTurnRight();
   }
 
-  return moveForward();*/
-}
-
-// while performing a right turn, the car might need
-// to be adjusted to the wall
-void adjustToWall()
-{
-  moveStop();
-  resetCounters();
-
-  while (countRM < 10)
-  {
-    analogWrite(RBM, 255);
-  }
-
-  moveStop();
-
-  resetCounters();
-  while (countRM < 12)
-  {
-    analogWrite(RBM, 255);
-    analogWrite(LBM, 255);
-  }
-
-  moveStop();
-
-  resetCounters();
-  while (countRM < 12)
-  {
-      analogWrite(RFM, 255);
-  }
-
-  moveStop();
-
-  resetCounters();
-  while (countRM < 8)
-  {
-      analogWrite(RFM, 255);
-      analogWrite(LFM, 255);
-  }
-
-  moveStop();
-
-  resetCounters();
+  return moveForward();
 }
 
 void moveStop()
@@ -186,7 +103,7 @@ void moveStop()
 // it adjusts the car so that it is constantly around 8.2 cm away from the wall
 void moveForward()
 {
-  analogWrite(RFM, 240);
+  analogWrite(RFM, 230);
   analogWrite(LFM, 255);
   digitalWrite(LBM, LOW);
   digitalWrite(RBM, LOW);
@@ -202,8 +119,8 @@ void moveForwardInTicks(int ticks)
 
   while (countRM < ticks)
   {
-    analogWrite(LFM, 255);
     analogWrite(RFM, 230);
+    analogWrite(LFM, 255);
     digitalWrite(LBM, LOW);
     digitalWrite(RBM, LOW);
   }
@@ -222,8 +139,8 @@ void moveBackwardInTicks(int ticks)
 
   while (countRM < ticks)
   {
-    analogWrite(LBM, 255);
     analogWrite(RBM, 225);
+    analogWrite(LBM, 255);
     digitalWrite(LFM, LOW);
     digitalWrite(RFM, LOW);
   }
@@ -233,8 +150,7 @@ void moveBackwardInTicks(int ticks)
 
   moveStop();
   
-  setServoAngle(0, servoGrip);
-  
+  setServoAngle(2, servoGrip);
 }
 
 void turnRight()
@@ -259,7 +175,7 @@ void turnRight()
   if (distanceFront > 15)
   {
     wait(100);
-    moveForwardInTicks(25);
+    moveForwardInTicks(20);
   }
 
   return wait(150);
@@ -291,7 +207,7 @@ void basicTurnLeft()
   moveStop();
   resetCounters();
 
-  while (countRM < 63)
+  while (countRM < 80)
   {
     analogWrite(RFM, 250);
     analogWrite(LBM, 250);
@@ -307,7 +223,7 @@ void basicTurnRight()
   moveStop();
   resetCounters();
 
-  while (countLM < 63)
+  while (countLM < 80)
   {
     analogWrite(LFM, 255);
     analogWrite(RBM, 240);
@@ -318,9 +234,51 @@ void basicTurnRight()
   moveStop();
 }
 
-float pulse(int proxTrig, int proxEcho)
+// while performing a right turn, the car might need
+// to be adjusted to the wall
+void adjustToWall()
+{
+  moveStop();
+  resetCounters();
+
+  while (countRM < 10)
+  {
+    analogWrite(RBM, 200);
+  }
+
+  moveStop();
+  resetCounters();
+
+  while (countRM < 12)
+  {
+    analogWrite(RBM, 225);
+    analogWrite(LBM, 250);
+  }
+
+  moveStop();
+  resetCounters();
+
+  while (countRM < 12)
+  {
+    analogWrite(RFM, 230);
+  }
+
+  moveStop();
+  resetCounters();
+
+  while (countRM < 8)
+  {
+    analogWrite(RFM, 230);
+    analogWrite(LFM, 230);
+  }
+
+  moveStop();
+  resetCounters();
+}
+
 // sends the pulse;
 // needs to be supplied with trigger and echo pins
+float pulse(int proxTrig, int proxEcho)
 {
     digitalWrite(proxTrig, HIGH);
     delayMicroseconds(10);
@@ -329,20 +287,6 @@ float pulse(int proxTrig, int proxEcho)
     float duration_us = pulseIn(proxEcho, HIGH);
 
     return duration_us * .017;
-}
-
-float lookFront()
-{
-  setServoAngle(84, servoSensor);
-  wait(500);
-  return round(pulse(trig, echo) * 100.0) / 100.0;
-}
-
-float lookLeft()
-{
-  setServoAngle(180, servoSensor);
-  wait(500);
-  return round(pulse(trig, echo) * 100.0) / 100.0;
 }
 
 // Function to set servo angle manually
@@ -355,10 +299,22 @@ void setServoAngle(int angle, int servoPin)
   delay(20); // wait for servo to settle
 }
 
+// returns forward distance in cm
+float getFrontDistance()
+{
+    return round(pulse(frontTrig, frontEcho) * 100.0) / 100.0;
+}
+
+// returns left distance in cm
+float getLeftDistance()
+{
+    return round(pulse(leftTrig, leftEcho) * 100.0) / 100.0;
+}
+
 float querySensors()
 {
-  distanceLeft = lookLeft();
-  distanceFront = lookFront();
+  distanceLeft = getLeftDistance();
+  distanceFront = getFrontDistance();
 }
 
 void queryIRSensors()
