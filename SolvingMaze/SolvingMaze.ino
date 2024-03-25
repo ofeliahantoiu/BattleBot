@@ -11,13 +11,13 @@
 #define encoderRM 2 //encoder Right Motor
 #define encoderLM 3 //encoder Left Motor
  
-#define frontTrig 13 // Ultrasonic sensor trigger front
+#define frontTrig 4 // Ultrasonic sensor trigger front
 #define frontEcho 12 // Ultrasonic sensor echo front
 
 #define leftTrig 8 // Ultrasonic sensor trigger front
-#define leftEcho 9 // Ultrasonic sensor echo front
+#define leftEcho 7 // Ultrasonic sensor echo front
  
-#define servoGrip 7 //servo used for the gripper
+#define servoGrip 9 //servo used for the gripper
 
 //ir1-ir6 - IR sensors starting from the left side
 #define ir1 A5
@@ -55,7 +55,14 @@ void setup()
   pinMode(RBM, OUTPUT);
 
   pinMode(servoGrip, OUTPUT);
-  setServoAngle(95, servoGrip);
+
+  // this initialises the gripper
+  for (int i = 0; i < 4; i++)
+  {
+    gripOpen();
+  }
+
+  gripOpen();
   
   pinMode(frontTrig, OUTPUT);
   pinMode(frontEcho, INPUT);
@@ -72,20 +79,74 @@ void setup()
 
 void loop() 
 {
+  // the code for awaiting the start;
+  // if the robot sees an object in front of it, it starts
+  if (waitingStart)
+  {
+    querySensors();
+    if (distanceFront < 25)
+    {
+        waitingStart = false;
+        startSequence = true;
+    }
+
+    return wait(100);
+  }
+
+    // the start itself;
+    // the robot ought to move, pick up the stick,
+    // turn left, and move forward
+  if (startSequence)
+  {
+    wait(2000);
+
+    moveForwardInTicks(100);
+    wait(250);
+
+    gripClose();
+    wait(250);
+
+    basicTurnLeft();
+    wait(250);
+
+    moveForwardInTicks(40);
+
+    startSequence = false;
+
+    return wait(250);
+  }
+
+  endDetected = allBlack();
+
+  // end sequence
+  if (endDetected)
+  {
+    moveStop();
+
+    gripOpen();
+    wait(150);
+    
+    moveBackwardInTicks(20);
+    
+    wait(150);
+    gripClose();
+
+    while (true)
+        ;
+  }
+
+  // the main sequence
+
   querySensors();
 
-  if (distanceLeft > 30)
+  if (distanceLeft > 30 && distanceLeft < 300)
   {
-    wait(350);
-    moveForwardInTicks(20);
-    basicTurnLeft();
+    return turnLeft();
   }
 
   if (distanceLeft < 25 && distanceFront < 12)
   {
-    wait(350);
-    moveForwardInTicks(20);
-    basicTurnRight();
+    return turnRight();
   }
 
   return moveForward();
@@ -103,10 +164,29 @@ void moveStop()
 // it adjusts the car so that it is constantly around 8.2 cm away from the wall
 void moveForward()
 {
-  analogWrite(RFM, 230);
-  analogWrite(LFM, 255);
-  digitalWrite(LBM, LOW);
-  digitalWrite(RBM, LOW);
+  querySensors();
+
+  if(distanceLeft > 9.2 && distanceLeft < 300)
+  {
+    analogWrite(RFM, 240);
+    analogWrite(LFM, 255);
+    digitalWrite(LBM, LOW);
+    digitalWrite(RBM, LOW);
+  }
+  else if (distanceLeft < 7.2)
+  {
+    analogWrite(RFM, 220);
+    analogWrite(LFM, 255);
+    digitalWrite(LBM, LOW);
+    digitalWrite(RBM, LOW);
+  }
+  else
+  {
+    analogWrite(RFM, 230);
+    analogWrite(LFM, 255);
+    digitalWrite(LBM, LOW);
+    digitalWrite(RBM, LOW);
+  }
 
   turnedRight = false;
 
@@ -119,7 +199,7 @@ void moveForwardInTicks(int ticks)
 
   while (countRM < ticks)
   {
-    analogWrite(RFM, 230);
+    analogWrite(RFM, 225);
     analogWrite(LFM, 255);
     digitalWrite(LBM, LOW);
     digitalWrite(RBM, LOW);
@@ -129,8 +209,6 @@ void moveForwardInTicks(int ticks)
   endDetected = allBlack();
 
   moveStop();
-  
-  setServoAngle(2, servoGrip);
 }
 
 void moveBackwardInTicks(int ticks)
@@ -155,10 +233,12 @@ void moveBackwardInTicks(int ticks)
 
 void turnRight()
 {
+  querySensors();
+
   moveStop();
   wait(150);
 
-  if(distanceLeft < 6 || turnedRight)
+  if(distanceLeft < 10 || turnedRight)
   {
     basicTurnRight();
     turnedRight = true;
@@ -174,27 +254,26 @@ void turnRight()
 
   if (distanceFront > 15)
   {
-    wait(100);
-    moveForwardInTicks(20);
+    wait(150);
+    moveForwardInTicks(30);
   }
 
   return wait(150);
 }
 
-
 void turnLeft()
 {
-  moveForwardInTicks(20);
-  wait(300);
+  moveForwardInTicks(40);
+  wait(350);
 
   basicTurnLeft();
-  wait(150);
+  wait(155);
 
   querySensors();
 
   if (distanceFront > 25)
   {
-    moveForwardInTicks(20);
+    moveForwardInTicks(40);
   }
 
   turnedRight = false;
@@ -207,10 +286,10 @@ void basicTurnLeft()
   moveStop();
   resetCounters();
 
-  while (countRM < 80)
+  while (countRM < 60)
   {
     analogWrite(RFM, 250);
-    analogWrite(LBM, 250);
+    analogWrite(LBM, 255);
     digitalWrite(RBM, LOW);
     digitalWrite(LFM, LOW);
   }
@@ -223,10 +302,10 @@ void basicTurnRight()
   moveStop();
   resetCounters();
 
-  while (countLM < 80)
+  while (countLM < 50)
   {
     analogWrite(LFM, 255);
-    analogWrite(RBM, 240);
+    analogWrite(RBM, 230);
     digitalWrite(RFM, LOW);
     digitalWrite(LBM, LOW);
   }
@@ -243,7 +322,7 @@ void adjustToWall()
 
   while (countRM < 10)
   {
-    analogWrite(RBM, 200);
+    analogWrite(RBM, 190);
   }
 
   moveStop();
@@ -252,7 +331,7 @@ void adjustToWall()
   while (countRM < 12)
   {
     analogWrite(RBM, 225);
-    analogWrite(LBM, 250);
+    analogWrite(LBM, 255);
   }
 
   moveStop();
@@ -260,7 +339,7 @@ void adjustToWall()
 
   while (countRM < 12)
   {
-    analogWrite(RFM, 230);
+    analogWrite(RFM, 190);
   }
 
   moveStop();
@@ -268,8 +347,8 @@ void adjustToWall()
 
   while (countRM < 8)
   {
-    analogWrite(RFM, 230);
-    analogWrite(LFM, 230);
+    analogWrite(RFM, 225);
+    analogWrite(LFM, 255);
   }
 
   moveStop();
@@ -289,7 +368,7 @@ float pulse(int proxTrig, int proxEcho)
     return duration_us * .017;
 }
 
-// Function to set servo angle manually
+// Function to set servo angle 
 void setServoAngle(int angle, int servoPin)
 {
   int pulseWidth = map(angle, 0, 180, minPulseWidth, maxPulseWidth);
@@ -358,6 +437,16 @@ void updateLM()
   noInterrupts();
   countLM++;
   interrupts();
+}
+
+void gripOpen()
+{
+  setServoAngle(90, servoGrip);
+}
+
+void gripClose()
+{
+  setServoAngle(2, servoGrip);
 }
 
 // waits for an amount of time in milliseconds
