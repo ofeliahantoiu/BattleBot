@@ -52,17 +52,17 @@ volatile int countLM = 0;
 #define NEOPIN 13
 
 // Define RGB colors using Adafruit_NeoPixel library
+#define RED pixels.Color(255, 0, 0)
+#define GREEN pixels.Color(0, 255, 0)
+#define BLUE pixels.Color(0, 0, 255)
 #define YELLOW pixels.Color(255, 255, 0)
 #define WHITE pixels.Color(255, 255, 255)
-#define GREEN pixels.Color(0, 255, 0)
-#define RED pixels.Color(255, 0, 0)
 #define OFF pixels.Color(0, 0, 0)
-#define BLUE pixels.Color(0, 0, 255)
 
 int colorValues[] = {0, 0, 0, 0, 0, 0};
 
 // Initialize NeoPixel object with defined number of pixels and pin
-Adafruit_NeoPixel pixels(NUM_PIXELS, NEOPIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel pixels(NUM_PIXELS, NEOPIN, NEO_RGB + NEO_KHZ800);
 
 void setup() 
 {
@@ -106,6 +106,7 @@ void loop()
   // if the robot sees an object in front of it, it starts
   if (waitingStart)
   {
+    startLights(4);
     querySensors();
     if (distanceFront < 25)
     {
@@ -123,7 +124,7 @@ void loop()
   {
     wait(2000);
 
-    moveForwardInTicks(109);
+    moveForwardInTicks(80);
     wait(250);
 
     gripClose();
@@ -193,24 +194,27 @@ void moveForward()
 
   if(distanceLeft > 9.2 && distanceLeft < 300)
   {
-    analogWrite(RFM, 240);
-    analogWrite(LFM, 255);
-    digitalWrite(LBM, LOW);
-    digitalWrite(RBM, LOW);
+    forwardLights();
+    analogWrite(RFM, 199);
+    analogWrite(LFM, 220);
+    analogWrite(LBM, 0);
+    analogWrite(RBM, 0);
   }
   else if (distanceLeft < 7.2)
   {
-    analogWrite(RFM, 220);
-    analogWrite(LFM, 255);
-    digitalWrite(LBM, LOW);
-    digitalWrite(RBM, LOW);
+    forwardLights();
+    analogWrite(RFM, 189);
+    analogWrite(LFM, 220);
+    analogWrite(LBM, 0);
+    analogWrite(RBM, 0);
   }
   else
   {
+    forwardLights();
     analogWrite(RFM, 230);
     analogWrite(LFM, 255);
-    digitalWrite(LBM, LOW);
-    digitalWrite(RBM, LOW);
+    analogWrite(LBM, 0);
+    analogWrite(RBM, 0);
   }
 
   turnedRight = false;
@@ -225,10 +229,11 @@ void moveForwardInTicks(int ticks)
 
   while (countRM < ticks)
   {
+    forwardLights();
     analogWrite(RFM, 225);
     analogWrite(LFM, 255);
-    digitalWrite(LBM, LOW);
-    digitalWrite(RBM, LOW);
+    analogWrite(LBM, 0);
+    analogWrite(RBM, 0);
   }
 
   turnedRight = false;
@@ -245,8 +250,8 @@ void moveBackwardInTicks(int ticks)
   {
     analogWrite(RBM, 225);
     analogWrite(LBM, 255);
-    digitalWrite(LFM, LOW);
-    digitalWrite(RFM, LOW);
+    analogWrite(LFM, 0);
+    analogWrite(RFM, 0);
   }
 
   turnedRight = false;
@@ -267,11 +272,13 @@ void turnRight()
 
   if(distanceLeft < 10 || turnedRight)
   {
+    turnLights();
     basicTurnRight();
     turnedRight = true;
   }
   else
   {
+    turnLights();
     adjustToWall();
   }
 
@@ -291,9 +298,10 @@ void turnRight()
 void turnLeft()
 {
   leftLights();
-  moveForwardInTicks(35);
+  moveForwardInTicks(40);
   wait(350);
 
+  leftLights();
   basicTurnLeft();
   wait(155);
 
@@ -315,12 +323,13 @@ void basicTurnLeft()
   moveStop();
   resetCounters();
 
-  while (countRM < 50)
+  while (countRM < 40)
   {
+    leftLights();
     analogWrite(RFM, 220);
     analogWrite(LBM, 255);
-    digitalWrite(RBM, LOW);
-    digitalWrite(LFM, LOW);
+    analogWrite(LFM, 0);
+    analogWrite(RBM, 0);
   }
 
   moveStop();
@@ -332,12 +341,13 @@ void basicTurnRight()
   moveStop();
   resetCounters();
 
-  while (countLM < 50)
+  while (countLM < 40)
   {
+    turnLights();
     analogWrite(LFM, 255);
     analogWrite(RBM, 230);
-    digitalWrite(RFM, LOW);
-    digitalWrite(LBM, LOW);
+    analogWrite(LBM, 0);
+    analogWrite(RFM, 0);
   }
 
   moveStop();
@@ -350,7 +360,7 @@ void adjustToWall()
   moveStop();
   resetCounters();
 
-  while (countRM < 14)
+  while (countRM < 10)
   {
     analogWrite(RBM, 190);
   }
@@ -358,7 +368,7 @@ void adjustToWall()
   moveStop();
   resetCounters();
 
-  while (countRM < 16)
+  while (countRM < 12)
   {
     analogWrite(RBM, 225);
     analogWrite(LBM, 255);
@@ -367,7 +377,7 @@ void adjustToWall()
   moveStop();
   resetCounters();
 
-  while (countRM < 16)
+  while (countRM < 12)
   {
     analogWrite(RFM, 190);
   }
@@ -375,7 +385,7 @@ void adjustToWall()
   moveStop();
   resetCounters();
 
-  while (countRM < 12)
+  while (countRM < 8)
   {
     analogWrite(RFM, 225);
     analogWrite(LFM, 255);
@@ -389,13 +399,13 @@ void adjustToWall()
 // needs to be supplied with trigger and echo pins
 float pulse(int proxTrig, int proxEcho)
 {
-    digitalWrite(proxTrig, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(proxTrig, LOW);
+  digitalWrite(proxTrig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(proxTrig, LOW);
 
-    float duration_us = pulseIn(proxEcho, HIGH);
+  float duration_us = pulseIn(proxEcho, HIGH);
 
-    return duration_us * .017;
+  return duration_us * .017;
 }
 
 // Function to set servo angle 
@@ -459,6 +469,7 @@ void updateRM()
 {
   noInterrupts();
   countRM++;
+  Serial.println(countRM);
   interrupts();
 }
 
@@ -466,6 +477,7 @@ void updateLM()
 {
   noInterrupts();
   countLM++;
+  Serial.println(countRM);
   interrupts();
 }
 
@@ -492,30 +504,30 @@ void wait(int timeToWait)
 // Function to set specific LEDs to represent left movement
 void leftLights()
 {
-    pixels.setPixelColor(0, YELLOW); // Yellow
-    pixels.setPixelColor(1, YELLOW); // Yellow
-    pixels.setPixelColor(2, WHITE);  // White
-    pixels.setPixelColor(3, WHITE);  // White
-    pixels.show(); // Update LEDs with new colors
+  pixels.setPixelColor(0, YELLOW); // Yellow
+  pixels.setPixelColor(1, WHITE); // Yellow
+  pixels.setPixelColor(2, YELLOW);  // White
+  pixels.setPixelColor(3, WHITE);  // White
+  pixels.show(); // Update LEDs with new colors
 }
 
 // Function to set all LEDs to represent turning movement
 void turnLights()
 {
-   pixels.setPixelColor(0, YELLOW); // Yellow
-   pixels.setPixelColor(1, YELLOW); // Yellow
-   pixels.setPixelColor(2, YELLOW); // Yellow
-   pixels.setPixelColor(3, YELLOW); // Yellow
-   pixels.show(); // Update LEDs with new colors
+  pixels.setPixelColor(0, WHITE); // Yellow
+  pixels.setPixelColor(1, YELLOW); // Yellow
+  pixels.setPixelColor(2, WHITE); // Yellow
+  pixels.setPixelColor(3, YELLOW); // Yellow
+  pixels.show(); // Update LEDs with new colors
 }
 
 // Function to set all LEDs to represent stopped movement
 void stopLights()
 {
-  pixels.setPixelColor(0, GREEN); // Green
-  pixels.setPixelColor(1, GREEN); // Green
-  pixels.setPixelColor(2, WHITE); // White
-  pixels.setPixelColor(3, WHITE); // White
+  pixels.setPixelColor(0, RED); // Green
+  pixels.setPixelColor(1, RED); // Green
+  pixels.setPixelColor(2, RED); // White
+  pixels.setPixelColor(3, RED); // White
   pixels.show(); // Update LEDs with new colors
 }
 
