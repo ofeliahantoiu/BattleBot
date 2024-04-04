@@ -1,4 +1,4 @@
-// LFM = Left Forward Motor A2
+  // LFM = Left Forward Motor A2
 // LBM = Left Backward Motor A1
 // RFM = Right Forward Motor B1
 // RBM = Right Backward Motor B2
@@ -16,26 +16,25 @@
 #define frontTrig 4 // Ultrasonic sensor trigger front
 #define frontEcho 12 // Ultrasonic sensor echo front
 
-
 #define leftTrig 8 // Ultrasonic sensor trigger front
 #define leftEcho 7 // Ultrasonic sensor echo front
  
 #define servoGrip 9 //servo used for the gripper
 
-//ir1-ir6 - IR sensors starting from the left side
-#define ir1 A5
-#define ir2 A4
+#define ir0 A0
+#define ir1 A1
+#define ir2 A2
 #define ir3 A3
-#define ir4 A2
-#define ir5 A1
-#define ir6 A0
+#define ir4 A4
+#define ir5 A5
+#define ir6 A6 
+#define ir7 A7
 
-int irSensors[6] = {ir1, ir2, ir3, ir4, ir5, ir6};
-boolean irValues[6];
+int irSensors[8] = {ir0, ir1, ir2, ir3, ir4, ir5, ir6, ir7};
+boolean irValues[8];
 
 const int minPulseWidth = 500; // Minimum pulse width for servo
 const int maxPulseWidth = 2500; // Maximum pulse width for servo
-
 
 float distanceFront, distanceLeft;
 
@@ -93,8 +92,8 @@ void setup()
   pinMode(encoderRM, INPUT);
   pinMode(encoderLM, INPUT);
 
-  attachInterrupt(digitalPinToInterrupt(encoderRM), updateRM, CHANGE);
   attachInterrupt(digitalPinToInterrupt(encoderLM), updateLM, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(encoderRM), updateRM, CHANGE);
 
   pixels.begin();
 
@@ -109,10 +108,11 @@ void loop()
   {
     startLights(4);
     querySensors();
+
     if (distanceFront < 25)
     {
-        waitingStart = false;
-        startSequence = true;
+      waitingStart = false;
+      startSequence = true;
     }
 
     return wait(100);
@@ -123,7 +123,7 @@ void loop()
   // turn left, and move forward
   if (startSequence)
   {
-    wait(2000);
+    wait(1500);
 
     moveForwardInTicks(100);
     wait(250);
@@ -151,7 +151,7 @@ void loop()
     gripOpen();
     wait(150);
     
-    moveBackwardInTicks(20);
+    moveBackwardInTicks(15);
     
     wait(150);
     gripClose();
@@ -164,7 +164,7 @@ void loop()
 
   querySensors();
 
-  if (distanceLeft > 30 && distanceLeft < 300)
+  if (distanceLeft > 30 && distanceLeft < 100)
   {
     return turnLeft();
   }
@@ -179,17 +179,20 @@ void loop()
 
 void moveStop()
 {
+  resetCounters();
   stopLights();
-  digitalWrite(RFM, LOW);
-  digitalWrite(LFM, LOW);
-  digitalWrite(RBM, LOW);
-  digitalWrite(LBM, LOW);
+
+  analogWrite(RFM, 0);
+  analogWrite(LFM, 0);
+  analogWrite(RBM, 0);
+  analogWrite(LBM, 0);
 }
 
 // the function defines the behaviour of the car when it is going forward
 // it adjusts the car so that it is constantly around 8.2 cm away from the wall
 void moveForward()
 {
+  resetCounters();
   forwardLights();
   querySensors();
 
@@ -231,7 +234,7 @@ void moveForwardInTicks(int ticks)
   while (countLM < ticks)
   {
     forwardLights();
-    analogWrite(RFM, 230);
+    analogWrite(RFM, 235);
     analogWrite(LFM, 255);
     analogWrite(LBM, 0);
     analogWrite(RBM, 0);
@@ -247,7 +250,7 @@ void moveBackwardInTicks(int ticks)
 {
   resetCounters();
 
-  while (countRM < ticks)
+  while (countLM < ticks)
   {
     analogWrite(RBM, 225);
     analogWrite(LBM, 255);
@@ -265,6 +268,7 @@ void moveBackwardInTicks(int ticks)
 
 void turnRight()
 {
+  resetCounters();
   turnLights();
   querySensors();
 
@@ -298,8 +302,9 @@ void turnRight()
 
 void turnLeft()
 {
+  resetCounters();
   leftLights();
-  moveForwardInTicks(40);
+  moveForwardInTicks(35);
   wait(350);
 
   leftLights();
@@ -324,7 +329,7 @@ void basicTurnLeft()
   moveStop();
   resetCounters();
 
-  while (countRM < 40)
+  while (countLM < 40)
   {
     leftLights();
     analogWrite(RFM, 220);
@@ -363,13 +368,13 @@ void adjustToWall()
 
   while (countRM < 10)
   {
-    analogWrite(RBM, 190);
+    analogWrite(RBM, 200);
   }
 
   moveStop();
   resetCounters();
 
-  while (countRM < 12)
+  while (countLM < 12)
   {
     analogWrite(RBM, 225);
     analogWrite(LBM, 255);
@@ -380,13 +385,13 @@ void adjustToWall()
 
   while (countRM < 12)
   {
-    analogWrite(RFM, 190);
+    analogWrite(RFM, 200);
   }
 
   moveStop();
   resetCounters();
 
-  while (countRM < 8)
+  while (countLM < 8)
   {
     analogWrite(RFM, 225);
     analogWrite(LFM, 255);
@@ -440,7 +445,7 @@ float querySensors()
 void queryIRSensors()
 {
   //The function sets irValues[] to the actual values
-  for (int i = 0; i < 6; i++)
+  for (int i = 0; i < 8; i++)
   {
     irValues[i] = analogRead(irSensors[i]) > 800;
   }
@@ -450,27 +455,21 @@ boolean allBlack()
 {
   short sum = 0;
   queryIRSensors();
-  for (int i = 0; i < 6; i++)
+  for (int i = 0; i < 8; i++)
   {
     if (irValues[i])
     {
       sum++;
     }
   }
-  return sum == 6;
-}
 
-void resetCounters()
-{
-  countRM = 0;
-  countLM = 0;
+  return sum == 8;
 }
 
 void updateRM()
 {
   noInterrupts();
   countRM++;
-  Serial.println(countRM);
   interrupts();
 }
 
@@ -480,6 +479,12 @@ void updateLM()
   countLM++;
   Serial.println(countLM);
   interrupts();
+}
+
+void resetCounters()
+{
+  countRM = 0;
+  countLM = 0;
 }
 
 void gripOpen()
@@ -499,72 +504,72 @@ void wait(int timeToWait)
   long time = millis();
 
   while (millis() < time + timeToWait)
-        ;
+      ;
 }
 
 // Function to set specific LEDs to represent left movement
 void leftLights()
 {
-  pixels.setPixelColor(0, YELLOW); // Yellow
-  pixels.setPixelColor(1, YELLOW); // Yellow
-  pixels.setPixelColor(2, WHITE);  // White
-  pixels.setPixelColor(3, WHITE);  // White
+  pixels.setPixelColor(0, WHITE); 
+  pixels.setPixelColor(1, YELLOW); 
+  pixels.setPixelColor(2, YELLOW);  
+  pixels.setPixelColor(3, WHITE);  
   pixels.show(); // Update LEDs with new colors
 }
 
 // Function to set all LEDs to represent turning movement
 void turnLights()
 {
-  pixels.setPixelColor(0, WHITE); // Yellow
-  pixels.setPixelColor(1, WHITE); // Yellow
-  pixels.setPixelColor(2, YELLOW); // Yellow
-  pixels.setPixelColor(3, YELLOW); // Yellow
+  pixels.setPixelColor(0, YELLOW); 
+  pixels.setPixelColor(1, WHITE); 
+  pixels.setPixelColor(2, WHITE);
+  pixels.setPixelColor(3, YELLOW); 
   pixels.show(); // Update LEDs with new colors
 }
 
 // Function to set all LEDs to represent stopped movement
 void stopLights()
 {
-  pixels.setPixelColor(0, RED); // Green
-  pixels.setPixelColor(1, RED); // Green
-  pixels.setPixelColor(2, RED); // White
-  pixels.setPixelColor(3, RED); // White
+  pixels.setPixelColor(0, RED); 
+  pixels.setPixelColor(1, RED); 
+  pixels.setPixelColor(2, RED); 
+  pixels.setPixelColor(3, RED); 
   pixels.show(); // Update LEDs with new colors
 }
 
 // Function to set specific LED to represent starting movement
 void startLights(int lightNR)
 {
-  pixels.setPixelColor(lightNR, BLUE); // Blue
+  pixels.setPixelColor(lightNR, BLUE); 
   pixels.show(); // Update LEDs with new colors
 }
 
 // Function to set all LEDs to represent forward movement
 void forwardLights()
 {
-  pixels.setPixelColor(0, GREEN); // Green
-  pixels.setPixelColor(1, GREEN); // Green
-  pixels.setPixelColor(2, GREEN); // Green
-  pixels.setPixelColor(3, GREEN); // Green
+  pixels.setPixelColor(0, GREEN); 
+  pixels.setPixelColor(1, GREEN); 
+  pixels.setPixelColor(2, GREEN); 
+  pixels.setPixelColor(3, GREEN); 
   pixels.show(); // Update LEDs with new colors
 }
 
 // Function to set all LEDs to represent normal state
 void normalLights() 
 {
-  pixels.setPixelColor(0, WHITE); // White
-  pixels.setPixelColor(1, WHITE); // White
-  pixels.setPixelColor(2, WHITE); // White
-  pixels.setPixelColor(3, WHITE); // White
+  pixels.setPixelColor(0, WHITE); 
+  pixels.setPixelColor(1, WHITE); 
+  pixels.setPixelColor(2, WHITE); 
+  pixels.setPixelColor(3, WHITE); 
   pixels.show(); // Update LEDs with new colors
 }
 
 // Function to set all LEDs to be turned off
 void lightsOff()
 {
-  pixels.setPixelColor(0, OFF); // Off
-  pixels.setPixelColor(1, OFF); // Off
-  pixels.setPixelColor(2, OFF); // Off
-  pixels.setPixelColor(3, OFF); // Off
+  pixels.setPixelColor(0, OFF); 
+  pixels.setPixelColor(1, OFF); 
+  pixels.setPixelColor(2, OFF);
+  pixels.setPixelColor(3, OFF); 
   pixels.show(); // Update LEDs with new colors
 }
