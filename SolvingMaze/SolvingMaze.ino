@@ -109,7 +109,7 @@ void loop()
   {
     startLights(4);
     querySensors();
-    if (distanceFront < 25)
+    if (distanceFront < 23)
     {
         waitingStart = false;
         startSequence = true;
@@ -123,9 +123,9 @@ void loop()
   // turn left, and move forward
   if (startSequence)
   {
-    wait(2000);
+    wait(200);
 
-    moveForwardInTicks(100);
+    moveForwardInTicks(80);
     wait(250);
 
     gripClose();

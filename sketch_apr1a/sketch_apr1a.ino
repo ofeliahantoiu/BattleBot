@@ -12,6 +12,7 @@
 
 #define encoderRM 2 //encoder Right Motor
 #define encoderLM 3 //encoder Left Motor
+#define COUNTER_INTERVAL 7 
  
 #define frontTrig 4 // Ultrasonic sensor trigger front
 #define frontEcho 12 // Ultrasonic sensor echo front
@@ -109,7 +110,7 @@ void loop()
     startLights(4);
     querySensors();
 
-    if (distanceFront < 25)
+    if (distanceFront < 23)
     {
       waitingStart = false;
       startSequence = true;
@@ -123,9 +124,9 @@ void loop()
   // turn left, and move forward
   if (startSequence)
   {
-    wait(1500);
+    wait(1300);
 
-    moveForwardInTicks(100);
+    moveForwardInTicks(50);
     wait(250);
 
     gripClose();
@@ -134,7 +135,7 @@ void loop()
     basicTurnLeft();
     wait(250);
 
-    moveForwardInTicks(40);
+    moveForwardInTicks(33);
 
     startSequence = false;
 
@@ -151,7 +152,7 @@ void loop()
     gripOpen();
     wait(150);
     
-    moveBackwardInTicks(15);
+    moveBackwardInTicks(13);
     
     wait(150);
     gripClose();
@@ -172,6 +173,11 @@ void loop()
   if (distanceLeft < 25 && distanceFront < 12)
   {
     return turnRight();
+  }
+
+  if (distanceFront < 11)
+  {
+    return moveBackwardInTicks(10);
   }
 
   return moveForward();
@@ -196,29 +202,23 @@ void moveForward()
   forwardLights();
   querySensors();
 
-  if(distanceLeft > 9.2 && distanceLeft < 300)
+  if(distanceLeft > 9.2 && distanceLeft < 13)
   {
     forwardLights();
-    analogWrite(RFM, 199);
-    analogWrite(LFM, 220);
-    analogWrite(LBM, 0);
-    analogWrite(RBM, 0);
+    analogWrite(RFM, 250);
+    analogWrite(LFM, 255);
   }
-  else if (distanceLeft < 7.2)
+  else if (distanceLeft < 7.2 || distanceLeft > 100)
   {
     forwardLights();
-    analogWrite(RFM, 189);
-    analogWrite(LFM, 220);
-    analogWrite(LBM, 0);
-    analogWrite(RBM, 0);
+    analogWrite(RFM, 254);
+    analogWrite(LFM, 255);
   }
   else
   {
     forwardLights();
-    analogWrite(RFM, 230);
+    analogWrite(RFM, 252);
     analogWrite(LFM, 255);
-    analogWrite(LBM, 0);
-    analogWrite(RBM, 0);
   }
 
   turnedRight = false;
@@ -234,10 +234,8 @@ void moveForwardInTicks(int ticks)
   while (countLM < ticks)
   {
     forwardLights();
-    analogWrite(RFM, 235);
+    analogWrite(RFM, 252);
     analogWrite(LFM, 255);
-    analogWrite(LBM, 0);
-    analogWrite(RBM, 0);
   }
 
   turnedRight = false;
@@ -252,10 +250,8 @@ void moveBackwardInTicks(int ticks)
 
   while (countLM < ticks)
   {
-    analogWrite(RBM, 225);
+    analogWrite(RBM, 252);
     analogWrite(LBM, 255);
-    analogWrite(LFM, 0);
-    analogWrite(RFM, 0);
   }
 
   turnedRight = false;
@@ -270,12 +266,12 @@ void turnRight()
 {
   resetCounters();
   turnLights();
-  querySensors();
 
+  querySensors();
   moveStop();
   wait(150);
 
-  if(distanceLeft < 10 || turnedRight)
+  if(distanceLeft < 7 || turnedRight)
   {
     turnLights();
     basicTurnRight();
@@ -293,8 +289,8 @@ void turnRight()
 
   if (distanceFront > 15)
   {
-    wait(150);
-    moveForwardInTicks(30);
+    wait(100);
+    moveForwardInTicks(20);
   }
 
   return wait(150);
@@ -304,18 +300,18 @@ void turnLeft()
 {
   resetCounters();
   leftLights();
-  moveForwardInTicks(35);
+
+  moveForwardInTicks(13);
   wait(350);
 
-  leftLights();
   basicTurnLeft();
-  wait(155);
+  wait(150);
 
   querySensors();
 
   if (distanceFront > 25)
   {
-    moveForwardInTicks(40);
+    moveForwardInTicks(13);
   }
 
   turnedRight = false;
@@ -329,13 +325,11 @@ void basicTurnLeft()
   moveStop();
   resetCounters();
 
-  while (countLM < 40)
+  while (countLM < 12)
   {
     leftLights();
-    analogWrite(RFM, 220);
-    analogWrite(LBM, 255);
-    analogWrite(LFM, 0);
-    analogWrite(RBM, 0);
+    analogWrite(RFM, 237);
+    analogWrite(LBM, 240);
   }
 
   moveStop();
@@ -347,13 +341,11 @@ void basicTurnRight()
   moveStop();
   resetCounters();
 
-  while (countLM < 40)
+  while (countLM < 12)
   {
     turnLights();
-    analogWrite(LFM, 255);
-    analogWrite(RBM, 230);
-    analogWrite(LBM, 0);
-    analogWrite(RFM, 0);
+    analogWrite(RBM, 237);
+    analogWrite(LFM, 240);
   }
 
   moveStop();
@@ -368,24 +360,7 @@ void adjustToWall()
 
   while (countRM < 10)
   {
-    analogWrite(RBM, 200);
-  }
-
-  moveStop();
-  resetCounters();
-
-  while (countLM < 12)
-  {
-    analogWrite(RBM, 225);
-    analogWrite(LBM, 255);
-  }
-
-  moveStop();
-  resetCounters();
-
-  while (countRM < 12)
-  {
-    analogWrite(RFM, 200);
+    analogWrite(RBM, 220);
   }
 
   moveStop();
@@ -393,7 +368,24 @@ void adjustToWall()
 
   while (countLM < 8)
   {
-    analogWrite(RFM, 225);
+    analogWrite(RBM, 240);
+    analogWrite(LBM, 255);
+  }
+
+  moveStop();
+  resetCounters();
+
+  while (countRM < 11)
+  {
+    analogWrite(RFM, 220);
+  }
+
+  moveStop();
+  resetCounters();
+
+  while (countLM < 9)
+  {
+    analogWrite(RFM, 240);
     analogWrite(LFM, 255);
   }
 
@@ -466,18 +458,56 @@ boolean allBlack()
   return sum == 8;
 }
 
-void updateRM()
+void updateLM()
 {
+  static unsigned long timer;
+
+  static bool lastState;
+
   noInterrupts();
-  countRM++;
+
+  if (millis() > timer) {
+
+    bool state = digitalRead(encoderLM);
+
+    if (state != lastState) {
+
+       countLM++;
+
+       lastState = state;
+
+    }
+
+    timer = millis() + COUNTER_INTERVAL;
+  } 
+
   interrupts();
 }
 
-void updateLM()
+void updateRM() 
 {
+  static unsigned long timer;
+
+  static bool lastState;
+
   noInterrupts();
-  countLM++;
-  Serial.println(countLM);
+
+  if (millis() > timer) {
+
+    bool state = digitalRead(encoderRM);
+
+    if (state != lastState) {
+
+       countRM++;
+
+       lastState = state;
+
+    }
+
+    timer = millis() + COUNTER_INTERVAL;
+
+  }
+
   interrupts();
 }
 
